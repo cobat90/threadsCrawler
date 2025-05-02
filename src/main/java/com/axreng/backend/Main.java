@@ -1,11 +1,16 @@
 package com.axreng.backend;
 
 import com.axreng.backend.application.service.CrawlService;
+import com.axreng.backend.application.service.CrawlServiceImpl;
+import com.axreng.backend.application.usecase.GetCrawlStatusUseCase;
+import com.axreng.backend.application.usecase.StartCrawlUseCase;
+import com.axreng.backend.domain.repository.CrawlRepository;
 import com.axreng.backend.domain.service.Crawler;
+import com.axreng.backend.infrastructure.config.EnvironmentVariables;
+import com.axreng.backend.infrastructure.config.Routes;
 import com.axreng.backend.infrastructure.repository.InMemoryCrawlRepository;
-import com.axreng.backend.controller.CrawlController;
-import com.axreng.backend.config.Routes;
-import com.axreng.backend.config.EnvironmentVariables;
+import com.axreng.backend.presentation.controller.CrawlController;
+
 import static spark.Spark.*;
 
 public class Main {
@@ -13,15 +18,19 @@ public class Main {
         // Configure port
         port(EnvironmentVariables.getPort());
 
-        // Initialize dependencies
-        InMemoryCrawlRepository crawlRepository = new InMemoryCrawlRepository();
+        // Initialize domain layer
+        CrawlRepository crawlRepository = new InMemoryCrawlRepository();
         Crawler crawler = new Crawler(EnvironmentVariables.getBaseUrl());
-        CrawlService crawlService = new CrawlService(crawlRepository, crawler);
+
+        // Initialize application layer
+        StartCrawlUseCase startCrawlUseCase = new StartCrawlUseCase(crawlRepository, crawler);
+        GetCrawlStatusUseCase getCrawlStatusUseCase = new GetCrawlStatusUseCase(crawlRepository);
+        CrawlService crawlService = new CrawlServiceImpl(startCrawlUseCase, getCrawlStatusUseCase);
+
+        // Initialize infrastructure layer
         CrawlController crawlController = new CrawlController(crawlService);
         Routes routes = new Routes(crawlController);
-
-        // Configure routes
-        routes.configure();
+        routes.setup();
 
         // Configure CORS
         options("/*", (request, response) -> {
@@ -29,10 +38,12 @@ public class Main {
             if (accessControlRequestHeaders != null) {
                 response.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
             }
+
             String accessControlRequestMethod = request.headers("Access-Control-Request-Method");
             if (accessControlRequestMethod != null) {
                 response.header("Access-Control-Allow-Methods", accessControlRequestMethod);
             }
+
             return "OK";
         });
 
