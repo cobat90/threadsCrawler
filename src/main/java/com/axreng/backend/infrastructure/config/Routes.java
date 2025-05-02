@@ -1,6 +1,7 @@
 package com.axreng.backend.infrastructure.config;
 
 import com.axreng.backend.application.service.CrawlService;
+import com.axreng.backend.presentation.controller.CrawlController;
 import com.axreng.backend.presentation.dto.CrawlRequest;
 import com.axreng.backend.presentation.dto.CrawlResponse;
 import com.google.gson.Gson;
@@ -10,11 +11,11 @@ import spark.Response;
 import static spark.Spark.*;
 
 public class Routes {
-    private final CrawlService crawlService;
+    private final CrawlController crawlController;
     private final Gson gson;
 
-    public Routes(CrawlService crawlService) {
-        this.crawlService = crawlService;
+    public Routes(CrawlController crawlController) {
+        this.crawlController = crawlController;
         this.gson = new Gson();
     }
 
@@ -23,13 +24,11 @@ public class Routes {
         get("/crawl/:id", this::getCrawlStatus, gson::toJson);
     }
 
-    private CrawlResponse startCrawl(Request request, Response response) {
-        CrawlRequest crawlRequest = gson.fromJson(request.body(), CrawlRequest.class);
-        return crawlService.startCrawl(crawlRequest);
+    private Object startCrawl(Request request, Response response) {
+        return crawlController.startCrawl(request, response);
     }
 
-    private CrawlResponse getCrawlStatus(Request request, Response response) {
-        String id = request.params(":id");
-        return crawlService.getCrawlStatus(id);
+    private Object getCrawlStatus(Request request, Response response) {
+        return crawlController.getCrawlStatus(request, response);
     }
 } 

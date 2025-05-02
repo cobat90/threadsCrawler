@@ -7,6 +7,9 @@ import com.google.gson.Gson;
 import spark.Request;
 import spark.Response;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class CrawlController {
     private final CrawlService crawlService;
     private final Gson gson;
@@ -16,13 +19,32 @@ public class CrawlController {
         this.gson = new Gson();
     }
 
-    public CrawlResponse startCrawl(Request request, Response response) {
-        CrawlRequest crawlRequest = gson.fromJson(request.body(), CrawlRequest.class);
-        return crawlService.startCrawl(crawlRequest);
+    public Object startCrawl(Request request, Response response) {
+        try {
+            CrawlRequest crawlRequest = gson.fromJson(request.body(), CrawlRequest.class);
+            return crawlService.startCrawl(crawlRequest);
+        } catch (IllegalArgumentException e) {
+            response.status(400);
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return error;
+        } catch (Exception e) {
+            response.status(500);
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Internal server error: " + e.getMessage());
+            return error;
+        }
     }
 
-    public CrawlResponse getCrawlStatus(Request request, Response response) {
-        String id = request.params(":id");
-        return crawlService.getCrawlStatus(id);
+    public Object getCrawlStatus(Request request, Response response) {
+        try {
+            String id = request.params(":id");
+            return crawlService.getCrawlStatus(id);
+        } catch (Exception e) {
+            response.status(500);
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Internal server error: " + e.getMessage());
+            return error;
+        }
     }
 } 

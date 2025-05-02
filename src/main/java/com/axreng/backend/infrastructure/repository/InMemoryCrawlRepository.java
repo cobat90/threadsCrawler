@@ -21,8 +21,4 @@ public class InMemoryCrawlRepository implements CrawlRepository {
         return Optional.ofNullable(crawls.get(id));
     }
 
-    @Override
-    public List<Crawl> findAll() {
-        return List.copyOf(crawls.values());
-    }
 } 

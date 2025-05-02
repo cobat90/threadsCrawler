@@ -14,6 +14,8 @@ import com.axreng.backend.presentation.controller.CrawlController;
 import static spark.Spark.*;
 
 public class Main {
+    private static StartCrawlUseCase startCrawlUseCase;
+
     public static void main(String[] args) {
         // Configure port
         port(EnvironmentVariables.getPort());
@@ -23,7 +25,7 @@ public class Main {
         Crawler crawler = new Crawler(EnvironmentVariables.getBaseUrl());
 
         // Initialize application layer
-        StartCrawlUseCase startCrawlUseCase = new StartCrawlUseCase(crawlRepository, crawler);
+        startCrawlUseCase = new StartCrawlUseCase(crawlRepository, crawler);
         GetCrawlStatusUseCase getCrawlStatusUseCase = new GetCrawlStatusUseCase(crawlRepository);
         CrawlService crawlService = new CrawlServiceImpl(startCrawlUseCase, getCrawlStatusUseCase);
 
@@ -52,5 +54,12 @@ public class Main {
             response.header("Access-Control-Allow-Headers", "*");
             response.type("application/json");
         });
+
+        // Add shutdown hook for cleanup
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (startCrawlUseCase != null) {
+                startCrawlUseCase.shutdown();
+            }
+        }));
     }
 }

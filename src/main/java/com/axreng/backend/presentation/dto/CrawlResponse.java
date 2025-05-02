@@ -10,6 +10,10 @@ public class CrawlResponse {
     public CrawlResponse() {
     }
 
+    public CrawlResponse(String id) {
+        this.id = id;
+    }
+
     public CrawlResponse(String id, String status, List<String> urls) {
         this.id = id;
         this.status = status;
