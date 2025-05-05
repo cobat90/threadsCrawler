@@ -10,33 +10,42 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class Crawl {
     private final String id;
-    private final AtomicReference<String> status;
+    private String keyword;
+    private String status;
     private final List<String> urls;
-    private final String keyword;
-    private final CountDownLatch completionLatch;
-    private final AtomicInteger activeTasks;
     private final Set<String> visitedUrls;
+    private CountDownLatch completionLatch;
+    private AtomicInteger activeTasks;
 
     public Crawl(String id, String keyword) {
         this.id = id;
         this.keyword = keyword;
-        this.status = new AtomicReference<>("active");
+        this.status = "active";
         this.urls = new ArrayList<>();
+        this.visitedUrls = ConcurrentHashMap.newKeySet();
         this.completionLatch = new CountDownLatch(1);
         this.activeTasks = new AtomicInteger(0);
-        this.visitedUrls = ConcurrentHashMap.newKeySet();
     }
 
     public String getId() {
         return id;
     }
 
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public void setKeyword(String keyword) {
+        this.keyword = keyword;
+    }
+
     public String getStatus() {
-        return status.get();
+        return status;
     }
 
     public void setStatus(String status) {
-        this.status.set(status);
+        this.status = status;
+        System.out.println("Crawl " + id + " status changed to: " + status);
     }
 
     public List<String> getUrls() {
@@ -51,19 +60,23 @@ public class Crawl {
         }
     }
 
-    public String getKeyword() {
-        return keyword;
+    public Set<String> getVisitedUrls() {
+        return visitedUrls;
     }
 
     public CountDownLatch getCompletionLatch() {
         return completionLatch;
     }
 
+    public void setCompletionLatch(CountDownLatch completionLatch) {
+        this.completionLatch = completionLatch;
+    }
+
     public AtomicInteger getActiveTasks() {
         return activeTasks;
     }
 
-    public Set<String> getVisitedUrls() {
-        return visitedUrls;
+    public void setActiveTasks(AtomicInteger activeTasks) {
+        this.activeTasks = activeTasks;
     }
 }

@@ -1,108 +1,64 @@
 package com.axreng.backend.domain.service;
 
 import com.axreng.backend.domain.model.Crawl;
+import com.axreng.backend.domain.service.processor.URLProcessor;
+import com.axreng.backend.domain.service.manager.CrawlManager;
+import com.axreng.backend.domain.service.manager.ThreadPoolManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.util.concurrent.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.TimeUnit;
 
 public class Crawler {
-    private static final Pattern URL_PATTERN = Pattern.compile("<a[^>]+href=[\"'](.*?)[\"']");
-    private static final int MAX_THREADS = 20;
-    private static final int TIMEOUT_MS = 5000;
-
+    private static final Logger logger = LoggerFactory.getLogger(Crawler.class);
+    private static final int CRAWL_TIMEOUT_SECONDS = 300; // 5 minutes
+    
     private final String baseUrl;
-    private final ExecutorService executor;
+    URLProcessor urlProcessor;
+    CrawlManager crawlManager;
+    ThreadPoolManager threadPoolManager;
 
     public Crawler(String baseUrl) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
-        this.executor = Executors.newFixedThreadPool(MAX_THREADS);
+        this.threadPoolManager = new ThreadPoolManager();
+        this.urlProcessor = new URLProcessor(this.baseUrl);
+        this.crawlManager = new CrawlManager();
     }
 
-    public void crawl(Crawl crawl) {
-        crawl.getVisitedUrls().clear(); // Clear visited URLs for new crawl
-        crawl.getActiveTasks().set(0); // Reset active tasks counter
-
-        submitTask(baseUrl, crawl);
-    }
-
-    private void submitTask(String url, Crawl crawl) {
-        if (!crawl.getVisitedUrls().add(url)) {
-            return; // Already visited
-        }
-
-        crawl.getActiveTasks().incrementAndGet();
-        executor.submit(() -> {
-            try {
-                URL targetUrl = new URL(url);
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(targetUrl.openConnection().getInputStream()));
-                StringBuilder content = new StringBuilder();
-                String line;
-
-                while ((line = reader.readLine()) != null) {
-                    content.append(line);
-                }
-
-                String pageContent = content.toString().toLowerCase();
-                if (pageContent.contains(crawl.getKeyword().toLowerCase())) {
-                    crawl.addUrl(url);
-                }
-
-                Matcher matcher = URL_PATTERN.matcher(pageContent);
-                while (matcher.find()) {
-                    String foundUrl = matcher.group(1);
-                    String absoluteUrl = resolveUrl(foundUrl);
-                    if (shouldVisit(absoluteUrl)) {
-                        submitTask(absoluteUrl, crawl);
-                    }
-                }
-
-                reader.close();
-            } catch (Exception e) {
-                System.err.println("Error crawling URL: " + url + " - " + e.getMessage());
-            } finally {
-                int remainingTasks = crawl.getActiveTasks().decrementAndGet();
-                if (remainingTasks == 0) {
-                    // Only count down the latch if we're sure all tasks are done
-                    synchronized (crawl) {
-                        if (crawl.getActiveTasks().get() == 0) {
-                            crawl.getCompletionLatch().countDown();
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    private boolean shouldVisit(String url) {
-        return url != null
-                && url.startsWith(baseUrl)
-                && !url.contains("../")
-                && !url.contains("javascript:")
-                && !url.contains("mailto:")
-                && !url.contains("#");
-    }
-
-    private String resolveUrl(String foundUrl) {
-        if (foundUrl == null || foundUrl.isEmpty()) {
-            return null;
-        }
-
+    public void crawl(final Crawl crawl) {
         try {
-            if (foundUrl.startsWith("http")) {
-                return foundUrl;
+            // Iniciar o crawl
+            crawlManager.startCrawl(crawl);
+            
+            // Processar URL base
+            urlProcessor.processUrl(baseUrl, crawl, threadPoolManager);
+
+            // Verificar se não há tarefas
+            if (crawlManager.hasNoActiveTasks(crawl)) {
+                crawlManager.completeCrawl(crawl);
+                return;
             }
-            if (foundUrl.startsWith("/")) {
-                return baseUrl + foundUrl.substring(1);
+
+            // Aguardar conclusão com timeout
+            boolean completed = crawlManager.awaitCompletion(crawl, CRAWL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            
+            if (!completed) {
+                logger.warn("Crawl {} timed out after {} seconds", crawl.getId(), CRAWL_TIMEOUT_SECONDS);
             }
-            return baseUrl + foundUrl;
+
+            // Finalizar o crawl
+            crawlManager.completeCrawl(crawl);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.error("Crawl {} was interrupted", crawl.getId(), e);
+            crawlManager.completeCrawl(crawl);
         } catch (Exception e) {
-            System.err.println("Error resolving URL: " + foundUrl + " - " + e.getMessage());
-            return null;
+            logger.error("Error during crawl {}", crawl.getId(), e);
+            crawlManager.completeCrawl(crawl);
         }
+    }
+
+    public void shutdown() {
+        threadPoolManager.shutdown();
     }
 }

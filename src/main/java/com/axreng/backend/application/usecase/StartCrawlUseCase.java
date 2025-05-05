@@ -7,6 +7,8 @@ import com.axreng.backend.domain.util.IdGenerator;
 import com.axreng.backend.domain.validation.KeywordValidator;
 import com.axreng.backend.presentation.dto.CrawlRequest;
 import com.axreng.backend.presentation.dto.CrawlResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,6 +21,7 @@ public class StartCrawlUseCase {
     private final CrawlRepository crawlRepository;
     private final Crawler crawler;
     private final ExecutorService executorService;
+    private static final Logger logger = LoggerFactory.getLogger(StartCrawlUseCase.class);
 
     public StartCrawlUseCase(CrawlRepository crawlRepository, Crawler crawler) {
         this.crawlRepository = crawlRepository;
@@ -34,11 +37,44 @@ public class StartCrawlUseCase {
         crawl.setStatus("active");
         crawlRepository.save(crawl);
 
+        // Criando uma thread dedicada para monitorar a conclusão deste crawl específico
+        Thread monitorThread = new Thread(() -> {
+            try {
+                // Aguarda a conclusão do crawl usando o latch
+                boolean completed = crawl.getCompletionLatch().await(CRAWL_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+
+                // Atualiza o status do crawl para "done" após a conclusão ou timeout
+                synchronized (crawl) {
+                    if (completed) {
+                        crawl.setStatus("done");
+                        logger.info("Crawl {} completed successfully. Status changed to done.", crawl.getId());
+                    } else {
+                        crawl.setStatus("timeout");
+                        logger.error("Crawl {} timed out after " + CRAWL_TIMEOUT_MINUTES + " minutes", crawl.getId());
+                    }
+                    crawlRepository.save(crawl);
+                }
+            } catch (Exception e) {
+                logger.error("Error monitoring crawl process: {}", e.getMessage());
+                synchronized (crawl) {
+                    crawl.setStatus("error");
+                    crawlRepository.save(crawl);
+                }
+            }
+        });
+        monitorThread.setDaemon(true);
+        monitorThread.start();
+
+        // Inicia o processo de crawling em outra thread do pool
         executorService.submit(() -> {
             try {
                 crawler.crawl(crawl);
-            } finally {
-                crawlRepository.save(crawl);
+            } catch (Exception e) {
+                logger.error("Error in crawl process: {}", e.getMessage());
+                synchronized (crawl) {
+                    crawl.setStatus("error");
+                    crawlRepository.save(crawl);
+                }
             }
         });
 
