@@ -17,8 +17,6 @@ public class Main {
     private static StartCrawlUseCase startCrawlUseCase;
 
     public static void main(String[] args) {
-        // Configure port
-        port(EnvironmentVariables.getPort());
 
         // Initialize domain layer
         CrawlRepository crawlRepository = new InMemoryCrawlRepository();
