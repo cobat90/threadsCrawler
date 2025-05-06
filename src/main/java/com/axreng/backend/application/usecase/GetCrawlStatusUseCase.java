@@ -1,10 +1,9 @@
 package com.axreng.backend.application.usecase;
 
+import com.axreng.backend.domain.exception.CrawlNotFoundException;
 import com.axreng.backend.domain.model.Crawl;
 import com.axreng.backend.domain.repository.CrawlRepository;
 import com.axreng.backend.presentation.dto.CrawlResponse;
-
-import java.util.Optional;
 
 public class GetCrawlStatusUseCase {
     private final CrawlRepository crawlRepository;
@@ -14,11 +13,16 @@ public class GetCrawlStatusUseCase {
     }
 
     public CrawlResponse execute(String id) {
-        Optional<Crawl> optCrawl = crawlRepository.findById(id);
-        if (optCrawl.isEmpty()) {
-            return null;
-        }
-        Crawl crawl = optCrawl.get();
-        return new CrawlResponse(crawl.getId(), crawl.getStatus(), crawl.getUrls());
+        return crawlRepository.findById(id)
+                .map(this::toResponse)
+                .orElseThrow(() -> new CrawlNotFoundException(id));
+    }
+
+    private CrawlResponse toResponse(Crawl crawl) {
+        return new CrawlResponse(
+            crawl.getId(),
+            crawl.getStatus(),
+            crawl.getUrls()
+        );
     }
 } 

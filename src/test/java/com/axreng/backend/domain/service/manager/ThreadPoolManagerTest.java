@@ -2,22 +2,17 @@ package com.axreng.backend.domain.service.manager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-@ExtendWith(MockitoExtension.class)
 class ThreadPoolManagerTest {
 
     private ThreadPoolManager threadPoolManager;
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
         threadPoolManager = new ThreadPoolManager();
     }
 

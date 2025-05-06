@@ -6,19 +6,17 @@ import com.axreng.backend.domain.service.manager.ThreadPoolManager;
 import com.axreng.backend.domain.service.processor.URLProcessor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
 class CrawlerTest {
 
     @Mock
@@ -36,6 +34,7 @@ class CrawlerTest {
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
         crawler = new Crawler(BASE_URL);
         crawler.urlProcessor = urlProcessor;
         crawler.crawlManager = crawlManager;

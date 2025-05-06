@@ -5,10 +5,9 @@ import com.axreng.backend.domain.service.manager.ThreadPoolManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -18,10 +17,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
-@ExtendWith(MockitoExtension.class)
 class URLProcessorTest {
 
     @Mock
@@ -41,6 +38,7 @@ class URLProcessorTest {
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
         urlProcessor = new URLProcessor(BASE_URL);
         crawl = new Crawl("test-id", "keyword");
         crawl.setStatus("active");

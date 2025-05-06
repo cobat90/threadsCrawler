@@ -8,14 +8,23 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class URLProcessor {
     private static final Logger logger = LoggerFactory.getLogger(URLProcessor.class);
-    private static final Pattern URL_PATTERN = Pattern.compile("<a[^>]+href=[\"'](.*?)[\"']");
+    // Pre-compile the pattern with optimized flags
+    private static final Pattern URL_PATTERN = Pattern.compile("<a[^>]+href=[\"'](.*?)[\"']",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    // Buffer size for reading from URL
+    private static final int BUFFER_SIZE = 8192;
 
     private final String baseUrl;
+    // Compile the keyword pattern once
+    private Pattern keywordPattern;
 
     public URLProcessor(String baseUrl) {
         this.baseUrl = baseUrl;
@@ -26,32 +35,46 @@ public class URLProcessor {
             return; // Already visited
         }
 
+        // Lazily initialize the keyword pattern
+        if (keywordPattern == null) {
+            keywordPattern = Pattern.compile(crawl.getKeyword().toLowerCase(), Pattern.CASE_INSENSITIVE);
+        }
+
         crawl.getActiveTasks().incrementAndGet();
         threadPoolManager.submitTask(() -> {
             try {
                 URL targetUrl = new URL(url);
                 BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(targetUrl.openConnection().getInputStream()));
-                StringBuilder content = new StringBuilder();
-                String line;
+                        new InputStreamReader(targetUrl.openConnection().getInputStream()),
+                        BUFFER_SIZE);
 
-                while ((line = reader.readLine()) != null) {
-                    content.append(line);
+                StringBuilder content = new StringBuilder();
+                char[] buffer = new char[BUFFER_SIZE];
+                int bytesRead;
+
+                while ((bytesRead = reader.read(buffer)) != -1) {
+                    content.append(buffer, 0, bytesRead);
                 }
 
-                String pageContent = content.toString().toLowerCase();
-                if (pageContent.contains(crawl.getKeyword().toLowerCase())) {
+                String pageContent = content.toString();
+
+                // Check for keyword using more efficient method
+                if (keywordPattern.matcher(pageContent).find()) {
                     crawl.addUrl(url);
                 }
 
-                Matcher matcher = URL_PATTERN.matcher(pageContent);
-                while (matcher.find()) {
-                    String foundUrl = matcher.group(1);
+                // Use a more efficient approach for URL extraction
+                Queue<String> foundUrls = extractUrls(pageContent);
+
+                // Process URLs in batches
+                while (!foundUrls.isEmpty()) {
+                    String foundUrl = foundUrls.poll();
                     String absoluteUrl = resolveUrl(foundUrl);
                     if (shouldVisit(absoluteUrl)) {
                         processUrl(absoluteUrl, crawl, threadPoolManager);
                     }
                 }
+
                 reader.close();
             } catch (Exception e) {
                 logger.error("Error processing URL: {}", url, e);
@@ -59,6 +82,18 @@ public class URLProcessor {
                 checkCompletion(crawl);
             }
         });
+    }
+
+    private Queue<String> extractUrls(String content) {
+        Queue<String> urls = new LinkedList<>();
+        Matcher matcher = URL_PATTERN.matcher(content);
+
+        // Extract all URLs at once instead of processing one by one
+        while (matcher.find()) {
+            urls.add(matcher.group(1));
+        }
+
+        return urls;
     }
 
     private void checkCompletion(Crawl crawl) {
@@ -100,4 +135,4 @@ public class URLProcessor {
             return null;
         }
     }
-} 
+}

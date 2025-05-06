@@ -3,18 +3,14 @@ package com.axreng.backend.domain.service.manager;
 import com.axreng.backend.domain.model.Crawl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class CrawlManagerTest {
 
     private CrawlManager crawlManager;
@@ -22,6 +18,7 @@ class CrawlManagerTest {
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
         crawlManager = new CrawlManager();
         crawl = new Crawl("test-id", "keyword");
         crawl.setStatus("active");
