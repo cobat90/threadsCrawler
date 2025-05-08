@@ -40,10 +40,8 @@ public class StartCrawlUseCase {
         // Criando uma thread dedicada para monitorar a conclusão deste crawl específico
         Thread monitorThread = new Thread(() -> {
             try {
-                // Aguarda a conclusão do crawl usando o latch
                 boolean completed = crawl.getCompletionLatch().await(CRAWL_TIMEOUT_MINUTES, TimeUnit.MINUTES);
 
-                // Atualiza o status do crawl para "done" após a conclusão ou timeout
                 synchronized (crawl) {
                     if (completed) {
                         crawl.setStatus("done");

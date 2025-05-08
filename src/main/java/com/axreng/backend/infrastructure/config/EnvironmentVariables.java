@@ -3,6 +3,8 @@ package com.axreng.backend.infrastructure.config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
+
 public class EnvironmentVariables {
     private static final Logger logger = LoggerFactory.getLogger(EnvironmentVariables.class);
     private static final String BASE_URL_ENV = "BASE_URL";
@@ -13,8 +15,7 @@ public class EnvironmentVariables {
             logger.error("Invalid BASE_URL_ENV environment variable.");
         }
         
-        // Ensure the base URL ends with a slash
-        baseUrl = baseUrl.trim();
+        baseUrl = Objects.requireNonNull(baseUrl).trim();
         if (!baseUrl.endsWith("/")) {
             baseUrl += "/";
         }

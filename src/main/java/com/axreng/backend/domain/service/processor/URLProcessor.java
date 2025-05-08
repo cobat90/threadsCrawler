@@ -58,12 +58,11 @@ public class URLProcessor {
 
                 String pageContent = content.toString();
 
-                // Check for keyword using more efficient method
+                // Check for keyword
                 if (keywordPattern.matcher(pageContent).find()) {
                     crawl.addUrl(url);
                 }
 
-                // Use a more efficient approach for URL extraction
                 Queue<String> foundUrls = extractUrls(pageContent);
 
                 // Process URLs in batches
@@ -88,7 +87,7 @@ public class URLProcessor {
         Queue<String> urls = new LinkedList<>();
         Matcher matcher = URL_PATTERN.matcher(content);
 
-        // Extract all URLs at once instead of processing one by one
+        // Extract all URLs at once
         while (matcher.find()) {
             urls.add(matcher.group(1));
         }

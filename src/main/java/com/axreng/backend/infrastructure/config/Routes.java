@@ -22,7 +22,6 @@ public class Routes {
     }
 
     public void setup() {
-        // Configure error handlers
         exception(IllegalArgumentException.class, (e, request, response) -> {
             response.status(400);
             response.type("application/json");
@@ -47,7 +46,6 @@ public class Routes {
             response.body(gson.toJson(error));
         });
 
-        // Configure routes
         post("/crawl", this::startCrawl, gson::toJson);
         get("/crawl/:id", this::getCrawlStatus, gson::toJson);
     }
