@@ -15,34 +15,38 @@ A simple web crawler that scans all pages within a given base URL and searches f
 
 ## 📡 API Endpoints
 
-### 🔸 POST `/crawl`
 
+### 🔸 POST `/crawl`
 Sends a word to be searched across the crawled pages.
 
-```json
 #### 📥 Request
+```json
 POST /crawl HTTP/1.1
 Host: localhost:4567
 Content-Type: application/json
 {
   "keyword": "security"
 }
+```
 
 📤 Response
+```json
 HTTP/1.1 200 OK  
 Content-Type: application/json
 {
   "id": "30vbllyb"
 }
-
-🔸 GET /crawl/{id}
+```
+### 🔸 GET /crawl/{id}
 Returns a list of all paths where the word was found.
 
 📥 Request
+```json
 GET /crawl/30vbllyb HTTP/1.1
 Host: localhost:4567
-
+```
 📤 Response
+```json
 HTTP/1.1 200 OK  
 Content-Type: application/json
 {
@@ -53,4 +57,5 @@ Content-Type: application/json
     "http://hiring.axreng.com/htmlman1/chcon.1.html"
   ]
 }
+```
 
